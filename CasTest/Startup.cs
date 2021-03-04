@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using NLog;
 using System.Security.Claims;
 using System.Threading.Tasks;
 
@@ -13,6 +14,8 @@ namespace CasTest
 {
     public class Startup
     {
+        private static readonly ILogger _logger = LogManager.GetCurrentClassLogger();
+
         public Startup(IConfiguration configuration)
         {
             Configuration = configuration;
@@ -43,34 +46,59 @@ namespace CasTest
                         // This example is giving every user "User" and "Admin" roles.
                         // You can use services or other logic here to determine actual roles for your users.
                         OnSigningIn = context =>
-            {
-                // Use `GetRequiredService` if you have a service that is using DI or an EF Context.
-                // var username = context.Principal.Identity.Name;
-                // var userSvc = context.HttpContext.RequestServices.GetRequiredService<UserService>();
-                // var roles = userSvc.GetRoles(username);
+                            {
+                                _logger.Info("OnSigningIn");
 
-                // Hard coded roles.
-                var roles = new[] { "User", "Admin" };
+                                // Use `GetRequiredService` if you have a service that is using DI or an EF Context.
+                                // var username = context.Principal.Identity.Name;
+                                // var userSvc = context.HttpContext.RequestServices.GetRequiredService<UserService>();
+                                // var roles = userSvc.GetRoles(username);
 
-                // `AddClaim` is not available directly from `context.Principal.Identity`.
-                // We can add a new empty identity with the roles we want to the principal. 
-                var identity = new ClaimsIdentity();
+                                // Hard coded roles.
 
-                foreach (var role in roles)
-                {
-                    identity.AddClaim(new Claim(ClaimTypes.Role, role));
-                }
+                                var roles = new[] { "User", "Admin" };
 
-                context.Principal.AddIdentity(identity);
+                                // `AddClaim` is not available directly from `context.Principal.Identity`.
+                                // We can add a new empty identity with the roles we want to the principal. 
+                                var identity = new ClaimsIdentity();
 
-                return Task.FromResult(0);
-            }
+                                foreach (var role in roles)
+                                {
+                                    identity.AddClaim(new Claim(ClaimTypes.Role, role));
+                                }
+
+                                context.Principal.AddIdentity(identity);
+
+                                return Task.FromResult(0);
+                            },
+                        OnSigningOut = context =>
+                        {
+                            // Single Sign-Out
+                            _logger.Info("OnSigningOut");
+
+                            return Task.CompletedTask;
+                        }
                     };
                 })
                 .AddCAS(o =>
                 {
                     o.CasServerUrlBase = Configuration["CasBaseUrl"];   // Set in `appsettings.json` file.
                     o.SignInScheme = CookieAuthenticationDefaults.AuthenticationScheme;
+                    o.Events = new CasEvents
+                    {
+                        OnCreatingTicket = context =>
+                        {
+                            _logger.Info("OnCreatingTicket");
+
+                            return Task.CompletedTask;
+                        },
+                        OnRemoteFailure = context =>
+                        {
+                            var failure = context.Failure;
+                            _logger.Info(failure, failure.Message);
+                            return Task.CompletedTask;
+                        }
+                    };
                 });
             services.AddControllersWithViews();
         }

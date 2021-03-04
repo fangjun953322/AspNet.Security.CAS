@@ -50,4 +50,8 @@
     <UpToDateCheckInput Remove="Views\Home\Error.cshtml" />
   </ItemGroup>
 
+  <ItemGroup>
+    <PackageReference Include="NLog.Web.AspNetCore" Version="4.11.0" />
+  </ItemGroup>
+
 </Project>
