@@ -3,7 +3,7 @@
   <PropertyGroup>
     <Description>AspNetCore.Security.CAS Class Library</Description>
     <Authors>IUF Development</Authors>
-    <TargetFramework>netstandard2.0</TargetFramework>
+    <TargetFramework>netstandard2.1</TargetFramework>
     <AssemblyName>AspNetCore.Security.CAS</AssemblyName>
     <PackageId>AspNetCore.Security.CAS</PackageId>
     <PackageTags>cas;apereo;middleware;authentication;security;aspnet;dotnet</PackageTags>
