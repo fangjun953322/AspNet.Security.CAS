@@ -1,12 +1,16 @@
 using AspNetCore.Security.CAS;
+using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Http.Extensions;
+using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using NLog;
+using System;
 using System.Security.Claims;
 using System.Threading.Tasks;
 
@@ -75,6 +79,26 @@ namespace CasTest
                         {
                             // Single Sign-Out
                             _logger.Info("OnSigningOut");
+                            var casUrl = new Uri(Configuration["CasBaseUrl"]);
+                            var links = context.HttpContext.RequestServices.GetRequiredService<LinkGenerator>();
+                            //var serviceUrl = links.GetUriByPage(context.HttpContext, "/Index");
+                            var serviceUrl = UriHelper.BuildAbsolute(context.HttpContext.Request.Scheme, context.HttpContext.Request.Host);
+                            _logger.Info(serviceUrl);
+                            var redirectUri = UriHelper.BuildAbsolute(
+                                casUrl.Scheme,
+                                new HostString(casUrl.Host, casUrl.Port),
+                                casUrl.LocalPath, "/logout",
+                                QueryString.Create("service", serviceUrl));
+
+                            var logoutRedirectContext = new RedirectContext<CookieAuthenticationOptions>(
+                                context.HttpContext,
+                                context.Scheme,
+                                context.Options,
+                                context.Properties,
+                                redirectUri
+                            );
+                            context.Response.StatusCode = 204; //Prevent RedirectToReturnUrl
+                            context.Options.Events.RedirectToLogout(logoutRedirectContext);
 
                             return Task.CompletedTask;
                         }
@@ -101,6 +125,7 @@ namespace CasTest
                     };
                 });
             services.AddControllersWithViews();
+            services.AddHttpClient();
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
